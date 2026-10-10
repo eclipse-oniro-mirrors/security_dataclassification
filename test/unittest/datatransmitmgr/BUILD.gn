@@ -25,7 +25,17 @@ ohos_unittest("DevSLMgrTest") {
   subsystem_name = "security"
   module_out_path = module_output_path
 
-  sources = [ "DevSLMgrTest.cpp" ]
+  include_dirs = [
+    "./",
+    "../../../interfaces/inner_api/datatransmitmgr/include",
+  ]
+
+  sources = [
+    "DevSLMgrTest.cpp",
+    "../../../frameworks/datatransmitmgr/dev_slinfo_adpt.c",
+    "../../../frameworks/datatransmitmgr/dev_slinfo_list.c",
+    "../../../frameworks/datatransmitmgr/dev_slinfo_mgr.c",
+  ]
 
   if (os_level == "standard") {
     branch_protector_ret = "pac_ret"
@@ -38,8 +48,6 @@ ohos_unittest("DevSLMgrTest") {
       boundary_sanitize = true
     }
   }
-
-  deps = [ "../../../interfaces/inner_api/datatransmitmgr:data_transit_mgr" ]
 
   defines = [ "HILOG_ENABLE" ]
 
