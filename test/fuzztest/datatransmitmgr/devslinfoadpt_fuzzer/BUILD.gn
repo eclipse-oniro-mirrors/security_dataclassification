@@ -30,9 +30,12 @@ ohos_fuzztest("DevSlinfoAdptFuzzTest") {
     "../../../../interfaces/inner_api/datatransmitmgr/include",
   ]
 
-  sources = [ "devslinfoadpt_fuzzer.cpp" ]
-
-  deps = [ "../../../../interfaces/inner_api/datatransmitmgr:data_transit_mgr" ]
+  sources = [
+    "devslinfoadpt_fuzzer.cpp",
+    "../../../../frameworks/datatransmitmgr/dev_slinfo_adpt.c",
+    "../../../../frameworks/datatransmitmgr/dev_slinfo_list.c",
+    "../../../../frameworks/datatransmitmgr/dev_slinfo_mgr.c",
+  ]
 
   defines = [ "HILOG_ENABLE" ]
 
