@@ -103,8 +103,8 @@ void TrimListToMaxLength(struct DATASLListParams *list, int32_t maxLength,
                 delList->callbackParams->callback(&(delList->callbackParams->queryParams), result, levelInfo);
             }
             free(delList->callbackParams);
-       }
-       free(delList);
+        }
+        free(delList);
     }
 }
 
