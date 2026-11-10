@@ -34,6 +34,9 @@ static bool g_isForcingFuzz3 = false;
 static bool g_envStarted = false;
 
 static uint8_t g_udidInvalid[MAX_UDID_LENGTH + 1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+static const int32_t TWO = 2;
+static const uint32_t EIGHT = 8;
+static const uint32_t SIXTEEN = 16;
 
 struct DeviceSecurityInfo {
     uint32_t magicNum {0};
@@ -111,8 +114,8 @@ static void FuzzTrimListToMaxLength(const uint8_t *data, size_t size)
     }
     uint32_t value = 0;
     (void)memcpy_s(&value, sizeof(value), data, sizeof(value));
-    int32_t maxLength = static_cast<int32_t>(value % 8);
-    int32_t nodeCount = static_cast<int32_t>((value >> 8) % 16);
+    int32_t maxLength = static_cast<int32_t>(value % EIGHT);
+    int32_t nodeCount = static_cast<int32_t>((value >> EIGHT) % SIXTEEN);
 
     struct DATASLListParams *list = InitList();
     if (list == nullptr) {
@@ -128,7 +131,7 @@ static void FuzzTrimListToMaxLength(const uint8_t *data, size_t size)
             sizeof(DATASLCallbackParams));
         callbackParams->queryParams.udid[0] = static_cast<uint8_t>(i);
         callbackParams->queryParams.udidLen = 1;
-        callbackParams->callback = (i % 2 == 0) ? &FuzzTrimCallback : nullptr;
+        callbackParams->callback = (i % TWO == 0) ? &FuzzTrimCallback : nullptr;
         if (PushListNode(list, callbackParams) != DEVSL_SUCCESS) {
             free(callbackParams);
             break;

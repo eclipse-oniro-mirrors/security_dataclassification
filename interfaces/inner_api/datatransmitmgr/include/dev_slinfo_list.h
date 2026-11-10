@@ -20,6 +20,10 @@
 #include <stdlib.h>
 #include "dev_slinfo_mgr.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct DATASLCallbackParams {
     DEVSLQueryParams queryParams;
     HigestSecInfoCallback *callback;
@@ -46,4 +50,7 @@ void DestroyPthreadMutex(void);
 
 void LookupCallback(struct DATASLListParams *list, DEVSLQueryParams *queryParams, int32_t result, uint32_t levelInfo);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
