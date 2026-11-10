@@ -110,7 +110,7 @@ static void FuzzTrimListToMaxLength(const uint8_t *data, size_t size)
         return;
     }
     uint32_t value = 0;
-    (void)memcpy_s(value, sizeof(value), data, sizeof(value));
+    (void)memcpy_s(&value, sizeof(value), data, sizeof(value));
     int32_t maxLength = static_cast<int32_t>(value % 8);
     int32_t nodeCount = static_cast<int32_t>((value >> 8) % 16);
 
@@ -124,11 +124,11 @@ static void FuzzTrimListToMaxLength(const uint8_t *data, size_t size)
         if (callbackParams == nullptr) {
             break;
         }
-        (void)memset_s(&callbackParams, sizeof(DATASLCallbackParams), 0,
+        (void)memset_s(callbackParams, sizeof(DATASLCallbackParams), 0,
             sizeof(DATASLCallbackParams));
         callbackParams->queryParams.udid[0] = static_cast<uint8_t>(i);
         callbackParams->queryParams.udidLen = 1;
-        callbackParams->callback = (i % 2 == 0) ? &FuzzTrimCallback | nullptr;
+        callbackParams->callback = (i % 2 == 0) ? &FuzzTrimCallback : nullptr;
         if (PushListNode(list, callbackParams) != DEVSL_SUCCESS) {
             free(callbackParams);
             break;

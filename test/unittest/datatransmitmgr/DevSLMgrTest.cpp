@@ -600,7 +600,7 @@ static HWTEST_F(DevSLMgrTest, TestTrimListToMaxLength005, TestSize.Level1)
     EXPECT_EQ(DEVSL_SUCCESS, InitPthreadMutex());
     g_tmpList = InitList();
     EXPECT_NE(g_tmpList, nullptr);
-    AddTrimList(2, &TrimCallback);
+    AddTrimList(2, nullptr);
     g_trimCallbackCount = 0;
 
     TrimListToMaxLength(g_tmpList, 1, 0, 0);

@@ -106,7 +106,6 @@ void TrimListToMaxLength(struct DATASLListParams *list, int32_t maxLength,
        }
        free(delList);
     }
-
 }
 
 void ClearList(struct DATASLListParams *list)
