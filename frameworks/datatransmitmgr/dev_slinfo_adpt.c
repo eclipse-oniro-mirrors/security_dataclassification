@@ -327,10 +327,7 @@ int32_t UpdateCallbackListParams(DEVSLQueryParams *queryParams, HigestSecInfoCal
     newListNode->queryParams.udidLen = queryParams->udidLen;
     newListNode->callback = callback;
 
-    ret = GetListLength(g_callbackList);
-    if (ret == MAX_LIST_LENGTH) {
-        RemoveListNode(g_callbackList, g_callbackList->next->callbackParams, result, levelInfo);
-    }
+    TrimListToMaxLength(g_callbackList, MAX_LIST_LENGTH, result, levelInfo);
 
     ret = PushListNode(g_callbackList, newListNode);
     if (ret != DEVSL_SUCCESS) {

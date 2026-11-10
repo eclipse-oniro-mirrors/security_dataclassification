@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Huawei Device Co., Ltd.
+ * Copyright (C) 2022-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -390,13 +390,12 @@ static HWTEST_F(DevSLMgrTest, TestGetHighestSecLevelExcept003, TestSize.Level0)
 
     struct DATASLCallbackParams *newListNode =
         (struct DATASLCallbackParams*)malloc(sizeof(struct DATASLCallbackParams));
-    EXPECT_NE(newListNode, nullptr);
+    ASSERT_NE(newListNode, nullptr);
     (void)memcpy_s(newListNode->queryParams.udid, MAX_UDID_LENGTH, queryParamsOpp.udid, queryParamsOpp.udidLen);
     newListNode->queryParams.udidLen = queryParamsOpp.udidLen;
     newListNode->callback = &ListCallback;
 
     PushListNode(g_tmpList, newListNode);
-    RemoveListNode(g_tmpList, newListNode, 0, 0);
     ClearList(g_tmpList);
     g_tmpList = nullptr;
     DestroyPthreadMutex();
@@ -415,7 +414,7 @@ static void AddList(void)
 
     struct DATASLCallbackParams *newListNode =
         (struct DATASLCallbackParams*)malloc(sizeof(struct DATASLCallbackParams));
-    EXPECT_NE(newListNode, nullptr);
+    ASSERT_NE(newListNode, nullptr);
     (void)memcpy_s(newListNode->queryParams.udid, MAX_UDID_LENGTH, queryParams.udid, queryParams.udidLen);
     newListNode->queryParams.udidLen = queryParams.udidLen;
     newListNode->callback = &tmpCallbackExcept004;
@@ -444,7 +443,7 @@ static HWTEST_F(DevSLMgrTest, TestGetHighestSecLevelExcept004, TestSize.Level0)
     for (int i = 0; i < LIST_LENGTH; i++) {
         AddList();
     }
-    (void)GetListLength(g_tmpList);
+    TrimListToMaxLength(g_tmpList, LIST_LENGTH, DEVSL_ERR_BAD_PARAMETERS, 0);
 
     ClearList(g_tmpList);
     g_tmpList = nullptr;
@@ -465,13 +464,11 @@ static HWTEST_F(DevSLMgrTest, TestGetHighestSecLevelExcept005, TestSize.Level0)
     (void)GetLocalUdid(&queryParams);
     struct DATASLCallbackParams *newListNode =
         (struct DATASLCallbackParams*)malloc(sizeof(struct DATASLCallbackParams));
-    EXPECT_NE(newListNode, nullptr);
+    ASSERT_NE(newListNode, nullptr);
     (void)memcpy_s(newListNode->queryParams.udid, MAX_UDID_LENGTH, queryParams.udid, queryParams.udidLen);
     newListNode->queryParams.udidLen = queryParams.udidLen;
     newListNode->callback = nullptr;
-    RemoveListNode(g_tmpList, newListNode, 0, 0);
     PushListNode(g_tmpList, newListNode);
-    RemoveListNode(g_tmpList, newListNode, 0, 0);
 
     ClearList(g_tmpList);
     g_tmpList = nullptr;
@@ -481,8 +478,137 @@ static HWTEST_F(DevSLMgrTest, TestGetHighestSecLevelExcept005, TestSize.Level0)
 static HWTEST_F(DevSLMgrTest, TestListNull, TestSize.Level1)
 {
     EXPECT_EQ(DEVSL_ERROR, PushListNode(nullptr, nullptr));
-    RemoveListNode(nullptr, nullptr, 0, 0);
     ClearList(nullptr);
-    EXPECT_EQ(DEVSL_ERROR, GetListLength(nullptr));
+    TrimListToMaxLength(nullptr, LIST_LENGTH, 0, 0);
     LookupCallback(nullptr, nullptr, 0, 0);
+}
+
+static int32_t CountListLength(struct DATASLListParams *list)
+{
+    int32_t count = 0;
+    struct DATASLListParams *pList = list->next;
+    while (pList != nullptr && pList != list) {
+        count++;
+        pList = pList->next;
+    }
+    return count;
+}
+
+static int32_t g_trimCallbackCount = 0;
+static int32_t g_trimCallbackResult = 0;
+static uint32_t g_trimCallbackLevel = 0;
+
+static void TrimCallback(DEVSLQueryParams *queryParams, int32_t result, uint32_t levelInfo)
+{
+    g_trimCallbackCount++;
+    g_trimCallbackResult = result;
+    g_trimCallbackLevel = levelInfo;
+}
+
+static void AddTrimList(int32_t count, HigestSecInfoCallback *callback)
+{
+    for (int32_t i = 0; i < count; i++) {
+        struct DATASLCallbackParams *newListNode =
+            (struct DATASLCallbackParams*)malloc(sizeof(struct DATASLCallbackParams));
+        ASSERT_NE(newListNode, nullptr);
+        (void)memset_s(newListNode, sizeof(struct DATASLCallbackParams), 0, sizeof(struct DATASLCallbackParams));
+        newListNode->queryParams.udid[0] = static_cast<uint8_t>(i);
+        newListNode->queryParams.udidLen = 1;
+        newListNode->callback = callback;
+        EXPECT_EQ(DEVSL_SUCCESS, PushListNode(g_tmpList, newListNode));
+    }
+}
+
+static HWTEST_F(DevSLMgrTest, TestTrimListToMaxLength001, TestSize.Level1)
+{
+    EXPECT_EQ(DEVSL_SUCCESS, InitPthreadMutex());
+    g_tmpList = InitList();
+    EXPECT_NE(g_tmpList, nullptr);
+    AddTrimList(LIST_LENGTH - 1, &TrimCallback);
+    g_trimCallbackCount = 0;
+
+    TrimListToMaxLength(g_tmpList, LIST_LENGTH, 0, 0);
+
+    EXPECT_EQ(LIST_LENGTH - 1, CountListLength(g_tmpList));
+    EXPECT_EQ(0, g_trimCallbackCount);
+
+    ClearList(g_tmpList);
+    g_tmpList = nullptr;
+    DestroyPthreadMutex();
+}
+
+static HWTEST_F(DevSLMgrTest, TestTrimListToMaxLength002, TestSize.Level1)
+{
+    EXPECT_EQ(DEVSL_SUCCESS, InitPthreadMutex());
+    g_tmpList = InitList();
+    EXPECT_NE(g_tmpList, nullptr);
+    AddTrimList(LIST_LENGTH, &TrimCallback);
+    g_trimCallbackCount = 0;
+    g_trimCallbackResult = 0;
+    g_trimCallbackLevel = 0;
+
+    TrimListToMaxLength(g_tmpList, LIST_LENGTH, DEVSL_ERR_REQUEST_DEVICE_EXCEED_LIMIT, DEFAULT_DEV_SEC_LEVEL);
+
+    EXPECT_EQ(LIST_LENGTH - 1, CountListLength(g_tmpList));
+    EXPECT_EQ(1, g_trimCallbackCount);
+    EXPECT_EQ(DEVSL_ERR_REQUEST_DEVICE_EXCEED_LIMIT, g_trimCallbackResult);
+    EXPECT_EQ(DEFAULT_DEV_SEC_LEVEL, g_trimCallbackLevel);
+
+    ClearList(g_tmpList);
+    g_tmpList = nullptr;
+    DestroyPthreadMutex();
+}
+
+static HWTEST_F(DevSLMgrTest, TestTrimListToMaxLength003, TestSize.Level1)
+{
+    EXPECT_EQ(DEVSL_SUCCESS, InitPthreadMutex());
+    g_tmpList = InitList();
+    EXPECT_NE(g_tmpList, nullptr);
+    AddTrimList(LIST_LENGTH + 5, &TrimCallback);
+    g_trimCallbackCount = 0;
+
+    TrimListToMaxLength(g_tmpList, LIST_LENGTH, 0, 0);
+
+    EXPECT_EQ(LIST_LENGTH - 1, CountListLength(g_tmpList));
+    EXPECT_EQ(6, g_trimCallbackCount);
+
+    ClearList(g_tmpList);
+    g_tmpList = nullptr;
+    DestroyPthreadMutex();
+}
+
+static HWTEST_F(DevSLMgrTest, TestTrimListToMaxLength004, TestSize.Level1)
+{
+    EXPECT_EQ(DEVSL_SUCCESS, InitPthreadMutex());
+    g_tmpList = InitList();
+    EXPECT_NE(g_tmpList, nullptr);
+    AddTrimList(3, &TrimCallback);
+    g_trimCallbackCount = 0;
+
+    TrimListToMaxLength(g_tmpList, LIST_LENGTH, 0, 0);
+
+    EXPECT_EQ(3, CountListLength(g_tmpList));
+    EXPECT_EQ(0, g_trimCallbackCount);
+
+    ClearList(g_tmpList);
+    g_tmpList = nullptr;
+    DestroyPthreadMutex();
+}
+
+static HWTEST_F(DevSLMgrTest, TestTrimListToMaxLength005, TestSize.Level1)
+{
+    EXPECT_EQ(DEVSL_SUCCESS, InitPthreadMutex());
+    g_tmpList = InitList();
+    EXPECT_NE(g_tmpList, nullptr);
+    AddTrimList(2, &TrimCallback);
+    g_trimCallbackCount = 0;
+
+    TrimListToMaxLength(g_tmpList, 1, 0, 0);
+
+    EXPECT_EQ(0, CountListLength(g_tmpList));
+    EXPECT_EQ(0, g_trimCallbackCount);
+
+    ClearList(g_tmpList);
+    g_tmpList = nullptr;
+    DestroyPthreadMutex();
 }

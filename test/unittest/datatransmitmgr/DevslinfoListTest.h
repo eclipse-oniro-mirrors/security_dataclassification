@@ -37,12 +37,10 @@ struct DATASLListParams {
 
 int32_t PushListNode(struct DATASLListParams *list, struct DATASLCallbackParams *callbackParams);
 
-void RemoveListNode(struct DATASLListParams *list, struct DATASLCallbackParams *callbackParams,
+void TrimListToMaxLength(struct DATASLListParams *list, int32_t maxLength,
     int32_t result, uint32_t levelInfo);
 
 void ClearList(struct DATASLListParams *list);
-
-int32_t GetListLength(struct DATASLListParams *list);
 
 int32_t InitPthreadMutex(void);
 
