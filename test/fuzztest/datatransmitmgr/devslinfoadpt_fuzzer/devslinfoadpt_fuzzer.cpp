@@ -26,12 +26,17 @@
 #include "accesstoken_kit.h"
 
 #include "dev_slinfo_adpt.h"
+#include "dev_slinfo_list.h"
 #include "dev_slinfo_mgr.h"
 
 namespace OHOS {
 static bool g_isForcingFuzz3 = false;
+static bool g_envStarted = false;
 
 static uint8_t g_udidInvalid[MAX_UDID_LENGTH + 1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+static const int32_t TWO = 2;
+static const uint32_t EIGHT = 8;
+static const uint32_t SIXTEEN = 16;
 
 struct DeviceSecurityInfo {
     uint32_t magicNum {0};
@@ -95,8 +100,52 @@ static int32_t GetLocalUdidFuzz3(DEVSLQueryParams *queryParams)
     return ret;
 }
 
+static void FuzzTrimCallback(DEVSLQueryParams *queryParams, int32_t result, uint32_t levelInfo)
+{
+    (void)queryParams;
+    (void)result;
+    (void)levelInfo;
+}
+
+static void FuzzTrimListToMaxLength(const uint8_t *data, size_t size)
+{
+    if (data == nullptr || size < sizeof(uint32_t) || !g_envStarted) {
+        return;
+    }
+    uint32_t value = 0;
+    (void)memcpy_s(&value, sizeof(value), data, sizeof(value));
+    int32_t maxLength = static_cast<int32_t>(value % EIGHT);
+    int32_t nodeCount = static_cast<int32_t>((value >> EIGHT) % SIXTEEN);
+
+    struct DATASLListParams *list = InitList();
+    if (list == nullptr) {
+        return;
+    }
+    for (int32_t i = 0; i < nodeCount; i++) {
+        struct DATASLCallbackParams *callbackParams =
+            (struct DATASLCallbackParams*)malloc(sizeof(struct DATASLCallbackParams));
+        if (callbackParams == nullptr) {
+            break;
+        }
+        (void)memset_s(callbackParams, sizeof(DATASLCallbackParams), 0,
+            sizeof(DATASLCallbackParams));
+        callbackParams->queryParams.udid[0] = static_cast<uint8_t>(i);
+        callbackParams->queryParams.udidLen = 1;
+        callbackParams->callback = (i % TWO == 0) ? &FuzzTrimCallback : nullptr;
+        if (PushListNode(list, callbackParams) != DEVSL_SUCCESS) {
+            free(callbackParams);
+            break;
+        }
+    }
+    TrimListToMaxLength(list, maxLength, DEVSL_ERR_REQUEST_DEVICE_EXCEED_LIMIT, DEFAULT_DEV_SEC_LEVEL);
+    TrimListToMaxLength(list, maxLength + 1, 0, 0);
+    TrimListToMaxLength(nullptr, maxLength, 0, 0);
+    ClearList(list);
+}
+
 void FuzzDoDevSlinfoAdpt(const uint8_t* data, size_t size)
 {
+    FuzzTrimListToMaxLength(data, size);
     if (data == nullptr || size <= MAX_UDID_LENGTH) {
         return;
     }
@@ -141,7 +190,7 @@ extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv)
     (void)argc;
     (void)argv;
     OHOS::NativeTokenGetFuzz3();
-    (void)DATASL_OnStart();
+    OHOS::g_envStarted = (DATASL_OnStart() == DEVSL_SUCCESS);
     return 0;
 }
 

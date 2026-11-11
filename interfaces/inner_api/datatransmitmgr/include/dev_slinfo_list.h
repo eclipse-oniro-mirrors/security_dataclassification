@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2022 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +20,10 @@
 #include <stdlib.h>
 #include "dev_slinfo_mgr.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct DATASLCallbackParams {
     DEVSLQueryParams queryParams;
     HigestSecInfoCallback *callback;
@@ -34,12 +39,10 @@ struct DATASLListParams* InitList(void);
 
 int32_t PushListNode(struct DATASLListParams *list, struct DATASLCallbackParams *callbackParams);
 
-void RemoveListNode(struct DATASLListParams *list, struct DATASLCallbackParams *callbackParams,
+void TrimListToMaxLength(struct DATASLListParams *list, int32_t maxLength,
     int32_t result, uint32_t levelInfo);
 
 void ClearList(struct DATASLListParams *list);
-
-int32_t GetListLength(struct DATASLListParams *list);
 
 int32_t InitPthreadMutex(void);
 
@@ -47,4 +50,7 @@ void DestroyPthreadMutex(void);
 
 void LookupCallback(struct DATASLListParams *list, DEVSLQueryParams *queryParams, int32_t result, uint32_t levelInfo);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

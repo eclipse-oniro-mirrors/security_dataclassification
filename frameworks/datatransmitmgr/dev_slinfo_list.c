@@ -66,37 +66,45 @@ int32_t PushListNode(struct DATASLListParams *list, struct DATASLCallbackParams 
     return DEVSL_SUCCESS;
 }
 
-void RemoveListNode(struct DATASLListParams *list,  struct DATASLCallbackParams *callbackParams,
+void TrimListToMaxLength(struct DATASLListParams *list, int32_t maxLength,
     int32_t result, uint32_t levelInfo)
 {
-    struct DATASLCallbackParams tmpCallbackParams;
-    (void)memset_s(&tmpCallbackParams, sizeof(struct DATASLCallbackParams), 0, sizeof(struct DATASLCallbackParams));
-    tmpCallbackParams.callback = NULL;
+    struct DATASLListParams *removedList = NULL;
     (void)pthread_mutex_lock(&g_mutex);
     if (list == NULL) {
-        DATA_SEC_LOG_ERROR("RemoveListNode: list is NULL");
+        DATA_SEC_LOG_ERROR("TrimListToMaxLength: list is NULL");
         (void)pthread_mutex_unlock(&g_mutex);
         return;
     }
+    int32_t listLength = 0;
     struct DATASLListParams *pList = list->next;
     while (pList != NULL && pList != list) {
-        if (CompareUdid(&(pList->callbackParams->queryParams), &(callbackParams->queryParams)) == DEVSL_SUCCESS) {
-            pList->prev->next = pList->next;
-            pList->next->prev = pList->prev;
-            if (pList->callbackParams != NULL) {
-                (void)memcpy_s(&(tmpCallbackParams.queryParams), sizeof(DEVSLQueryParams),
-                    &(pList->callbackParams->queryParams), sizeof(DEVSLQueryParams));
-                tmpCallbackParams.callback = pList->callbackParams->callback;
-                free(pList->callbackParams);
-            }
-            free(pList);
-            break;
-        }
+        listLength++;
         pList = pList->next;
     }
+    while (listLength >= maxLength) {
+        struct DATASLListParams *delList = list->next;
+        if (delList == NULL || delList == list) {
+            break;
+        }
+        delList->prev->next = delList->next;
+        delList->next->prev = delList->prev;
+        delList->next = removedList;
+        removedList = delList;
+        listLength--;
+    }
     (void)pthread_mutex_unlock(&g_mutex);
-    if (tmpCallbackParams.callback != NULL) {
-        tmpCallbackParams.callback(&(tmpCallbackParams.queryParams), result, levelInfo);
+
+    while (removedList != NULL) {
+        struct DATASLListParams *delList = removedList;
+        removedList = removedList->next;
+        if (delList->callbackParams != NULL) {
+            if (delList->callbackParams->callback != NULL) {
+                delList->callbackParams->callback(&(delList->callbackParams->queryParams), result, levelInfo);
+            }
+            free(delList->callbackParams);
+        }
+        free(delList);
     }
 }
 
@@ -122,24 +130,6 @@ void ClearList(struct DATASLListParams *list)
     }
     free(list);
     (void)pthread_mutex_unlock(&g_mutex);
-}
-
-int32_t GetListLength(struct DATASLListParams *list)
-{
-    (void)pthread_mutex_lock(&g_mutex);
-    if (list == NULL) {
-        DATA_SEC_LOG_ERROR("GetListLength: list is NULL");
-        (void)pthread_mutex_unlock(&g_mutex);
-        return DEVSL_ERROR;
-    }
-    struct DATASLListParams *pList = list->next;
-    int32_t listLength = 0;
-    while (pList != NULL && pList != list) {
-        listLength++;
-        pList = pList->next;
-    }
-    (void)pthread_mutex_unlock(&g_mutex);
-    return listLength;
 }
 
 void LookupCallback(struct DATASLListParams *list, DEVSLQueryParams *queryParams, int32_t result, uint32_t levelInfo)
